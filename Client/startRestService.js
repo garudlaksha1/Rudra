@@ -124,6 +124,8 @@ app.post('/engineconfig/', function(req, res) {
 function register(){
   fs.readFile('clientID.txt', 'utf8', function(err, Clientdata){
     if (err) throw err;
+    clientPort = clientPort.replace(/\s/g, '');
+    Clientdata = Clientdata.replace(/\s/g, '');
     var options = {
       host: server,
       port: serverPort,
