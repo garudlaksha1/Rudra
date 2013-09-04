@@ -228,6 +228,29 @@ var closureisValidCredential = function(username,password,callback,db){
 	  });
 }
 
+var getUserClientMapping = function(username, callback){
+	db.open(function(error){
+	    closuregetUserClientMapping(username, callback, db);
+	  });
+}
+
+
+var closuregetUserClientMapping = function(username, callback, db){
+	  db.collection("userClientMapping", function(error, collection) {
+		  collection.find({"userName":username}, function(error, cursor){
+        cursor.toArray(function(errorarray, data){
+          if(data[0] == undefined){
+            db.close(); 
+            callback(false);
+          } else {
+            db.close(); 
+            callback({"clientID":data[0].clientID});
+          }
+        });
+      });
+	  });
+}
+
 exports.performHeartBeat = performHeartBeat;
 exports.insertClientIDIntoDB = insertClientIDIntoDB;
 exports.getclientStatusData = getclientStatusData;
@@ -237,3 +260,4 @@ exports.getClientData = getClientData;
 exports.fetchJSONReportInDB = fetchJSONReportInDB;
 exports.storeJSONReportInDB = storeJSONReportInDB;
 exports.isValidCredential = isValidCredential;
+exports.getUserClientMapping = getUserClientMapping;

@@ -187,6 +187,17 @@ app.post('/authenticate/', function(req, res){
   });
 });
 
+app.get('/getclients/:username', function(req, res){
+  userName = req.params.username;
+  db.getUserClientMapping(userName, function(status){
+    if(status == false){
+      res.send("No clients");
+    } else {
+      res.send(status);
+    }
+  });
+});
+
 var changeClientStatus = function(){
   //setTimeout(changeClientStatus, 20000)
 }
