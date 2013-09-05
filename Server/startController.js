@@ -62,18 +62,10 @@ app.post('/runtool/:clientID/:toolID', function(req, res){
       runRes.setEncoding('utf8');
       runRes.on('data', function (runStatus) {
         if(runStatus == "ok"){
-          res.send("tool Running "+scanID);
+          res.send({"scanID":scanID});
         } else {
           res.status(404).send("error in action"); 
-        }
-        //var insertData = JSON.parse(reportData);
-        //db.storeJSONReportInDB(insertData, function(status){
-          //if(status == "ok"){
-            //console.log("Db entered: " + reportData);
-          //} else { 
-            //console.log("error inserting in db");
-            //res.status(404).send("error in action");     
-          //}        
+        }        
       });
     });
     req.write(JSON.stringify(runInfo));
@@ -121,7 +113,11 @@ app.post('/addtool/', function(req, res){
 
       request.on('response', function(resEngine) {
         console.log(resEngine.statusCode);
-        if(resEngine.statusCode == "200"){ res.status(200).send("done"); }
+        if(resEngine.statusCode == "200"){
+          res.status(200).send({"status":"OK"});
+        } else {
+          res.status(404).send("error in action");
+        }
       });
     });
   });
@@ -180,9 +176,20 @@ app.post('/authenticate/', function(req, res){
   password = authData.password;
   db.isValidCredential(userName, password, function(status){
     if(status == true){
-      res.send("Success");
+      res.send({"status":"Success"});
     } else {
-      res.send("Invalid");
+      res.send({"status":"Invalid"});
+    }
+  });
+});
+
+app.get('/getclients/:username', function(req, res){
+  userName = req.params.username;
+  db.getUserClientMapping(userName, function(status){
+    if(status == false){
+      res.send("No clients");
+    } else {
+      res.send(status);
     }
   });
 });
