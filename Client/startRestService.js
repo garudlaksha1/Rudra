@@ -4,7 +4,8 @@ var express = require('express')
   , AdmZip = require('adm-zip')
   , fstream = require('fstream')
   , mongoDB = require('./mongoDB.js')
-  , querystring = require('querystring');
+  , querystring = require('querystring')
+  , path = require('path');
 
 var app = express();
 //var scanID = 0;
@@ -12,6 +13,7 @@ var clientID;
 var server = process.argv[2];
 var serverPort = process.argv[3];
 var clientPort = process.argv[4];
+var Clientdata;
 
 app.configure(function(){
   app.set('port', process.env.PORT || clientPort);
@@ -122,14 +124,16 @@ app.post('/engineconfig/', function(req, res) {
 });
 
 function register(){
-  fs.readFile('clientID.txt', 'utf8', function(err, Clientdata){
+  var configPath = path.join(path.dirname(fs.realpathSync(__filename)), '/');
+  fs.readFile(configPath + 'clientID.txt', 'utf8', function(err, Clientdata){
     if (err) throw err;
-    clientPort = clientPort.replace(/\s/g, '');
-    Clientdata = Clientdata.replace(/\s/g, '');
+    clientPort = clientPort.replace(/(\r\n|\n|\r)/gm,"");
+    Clientdata = Clientdata.replace(/(\r\n|\n|\r)/gm,"");
+    clientID = Clientdata;
     var options = {
       host: server,
       port: serverPort,
-      path: "/register/"+clientPort+"/"+Clientdata,
+      path: "/register/"+clientPort+"/"+clientID,
       method: 'GET'
     };
     callback = function(response) {
@@ -141,12 +145,13 @@ function register(){
 
       //the whole response has been recieved, so we just print it out here
       response.on('end', function () {
-        if(Clientdata == "0"){
+        console.log(clientID)
+        if(clientID == "0"){
           console.log(str);
           var data = JSON.parse(str);
           console.log(data.clientID);
           
-          fs.writeFile("clientID.txt", data.clientID, function(err) {
+          fs.writeFile(configPath + "clientID.txt", data.clientID, function(err) {
             if(err) {
               console.log(err);
             } else {
@@ -173,7 +178,7 @@ function heartBeat(){
     for(var i=0; i<data.length; i++){
       resData.toolList.push(data[i].toolID);
     }
-
+    
     var pathStr = "/heartbeat/"+clientID;
     console.log(resData);
     var data = querystring.stringify(resData);
