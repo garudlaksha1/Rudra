@@ -18,8 +18,7 @@ var insertClientIDIntoDB = function(id, clientIP, clientPort, callback){
   });
 }
 
-var closureinsertClientIDIntoDB = function(id, clientIP, clientPort, callback, db){
-  
+var closureinsertClientIDIntoDB = function(id, clientIP, clientPort, callback, db){  
 		db.collection("idCollection", function(error, collection) {
 		  collection.findAndModify({"clientID":id},
                                [['_id','asc']],
@@ -27,6 +26,7 @@ var closureinsertClientIDIntoDB = function(id, clientIP, clientPort, callback, d
                                {upsert:true}, 
                                function(err,inserted){
 			  if(err){
+          db.close();
 				  console.log("Some error occured in client db insertion");
 			  }
 			  else{
@@ -35,8 +35,26 @@ var closureinsertClientIDIntoDB = function(id, clientIP, clientPort, callback, d
           callback();
 			  }
 		  });
-	  });
-	
+	  });	
+}
+
+
+//Utility function to fetch all clients
+var getClientIds = function(clientID, callback){
+	db.open(function(error){
+    closuregetClientIds(clientID, callback, db);
+  });
+}
+
+var closuregetClientIds = function(clientID, callback, db){  
+		db.collection("toolsCollection", function(error, collection) {
+		  collection.find({"clientID":clientID}, function(error, cursor){
+        cursor.toArray(function(errorarray, data){
+          db.close();
+          callback(data[0].toolList);
+        });
+      });
+	  });	
 }
 
 //Utility function for heartbeat operation
@@ -47,8 +65,7 @@ var performHeartBeat = function(id, status, toolsArray, callback) {
   });
 }
 
-var closureperformHeartBeat = function(id, status, toolsArray, callback, db){
-  
+var closureperformHeartBeat = function(id, status, toolsArray, callback, db){  
 		var createStatusForClient = {
 		  "clientID":id,
 		  "status":status,
@@ -57,17 +74,16 @@ var closureperformHeartBeat = function(id, status, toolsArray, callback, db){
 	  db.collection("toolsCollection", function(error, collection) {
 		  collection.insert(createStatusForClient,function(err,inserted){
 			  if(err){
+          db.close();
 				  console.log("Some error occured in 1st heartbeat");
 			  }
 			  else{
           db.close();
           callback();
 				  console.log("Client heart beat Inserted successfully");
-			  }
-			  
+			  }			  
 		  });
-	  });
-    
+	  });   
 }
 
 
@@ -79,8 +95,7 @@ var getclientStatusData = function(id, callback) {
   });  
 }
 
-var closuregetclientStatusData = function(id, callback, db){
-		
+var closuregetclientStatusData = function(id, callback, db){		
 	  db.collection("toolsCollection", function(error, collection) {
 		  collection.find({"clientID":id}, function(error, cursor){
         cursor.toArray(function(errorarray, data){
@@ -94,7 +109,6 @@ var closuregetclientStatusData = function(id, callback, db){
         });
       });
 	  });
-
 }
 
 // utility to update toolList after heartbeats
@@ -108,13 +122,13 @@ var closureupdateHeartBeatStatus = function(id, status, toolsArray, callback, db
 	  db.collection("toolsCollection", function(error, collection) {
 		  collection.update({"clientID":id},{$set:{"status":status,"toolList":toolsArray}}, function(err,inserted){
 			  if(err){
+          db.close();
 				  console.log("Some error occured");
 			  }
 			  else{
           db.close();
           callback();
 			  }
-			  
 		  });
 	  });
 }
@@ -163,19 +177,18 @@ var storeJSONReportInDB = function(reportObj, callback){
 	  });
 }
 
-var closurestoreJSONReportInDB = function(reportObj,callback,db){
-	
+var closurestoreJSONReportInDB = function(reportObj,callback,db){	
 	  db.collection("toolReporting", function(error, collection) {
 		  collection.insert(reportObj,function(err,inserted){
 			  if(err){
+          db.close();
 				  console.log("Some error occured in db report entry");
 			  }
 			  else{
           db.close();
+          console.log("db report Inserted successfully");
           callback("ok");
-				  console.log("db report Inserted successfully");
-			  }
-			  
+			  }			  
 		  });
 	  });
 }
@@ -187,8 +200,7 @@ var fetchJSONReportInDB = function(id, callback) {
   });  
 }
 
-var closurefetchJSONReportInDB = function(id, callback, db){
-		
+var closurefetchJSONReportInDB = function(id, callback, db){		
 	  db.collection("toolReporting", function(error, collection) {
 		  collection.find({"scanid":id}, function(error, cursor){
         cursor.toArray(function(errorarray, data){
@@ -202,7 +214,6 @@ var closurefetchJSONReportInDB = function(id, callback, db){
         });
       });
 	  });
-
 }
 
 var isValidCredential = function(username,password,callback){
@@ -228,6 +239,186 @@ var closureisValidCredential = function(username,password,callback,db){
 	  });
 }
 
+var getUserClientMapping = function(username, callback){
+	db.open(function(error){
+	    closuregetUserClientMapping(username, callback, db);
+	  });
+}
+
+
+var closuregetUserClientMapping = function(username, callback, db){
+	  db.collection("userClientMapping", function(error, collection) {
+		  collection.find({"username":username}, function(error, cursor){
+        cursor.toArray(function(errorarray, data){
+          if(data[0] == undefined){
+            db.close(); 
+            callback(false);
+          } else {
+            db.close(); 
+            callback({"clientID":data[0].clientID});
+          }
+        });
+      });
+	  });
+}
+
+//Admin addtool funtion
+var addToolInfo = function(toolData, callback){
+	db.open(function(error){
+	    closureaddToolInfo(toolData, callback, db);
+	  });
+}
+
+var closureaddToolInfo = function(toolData,callback,db){	
+	  db.collection("toolData", function(error, collection) {
+		  collection.insert(toolData,function(err,inserted){
+			  if(err){
+          db.close();
+				  console.log("Some error occured in db report entry");
+			  }
+			  else{
+          db.close();
+          callback("ok");
+				  console.log("db tool Inserted successfully");
+			  }
+			  
+		  });
+	  });
+}
+
+
+//Utility function to update client user mapping
+var addClientUserMapping = function(userName, clientID, callback){
+	db.open(function(error){
+    closureaddClientUserMapping(userName, clientID, callback, db);
+  });
+}
+
+var closureaddClientUserMapping = function(userName, clientID, callback, db){
+    console.log(userName);
+    console.log(clientID);
+		db.collection("userClientMapping", function(error, collection) {
+		  collection.findAndModify({"username":userName},
+                               [['_id','asc']],
+                               {$set: {"clientID":clientID}},
+                               {upsert:true}, 
+                               function(err,inserted){
+			  if(err){
+				  console.log("Some error occured in client db insertion");
+          db.close();
+          callback("error");
+			  }
+			  else{
+				  console.log("mapping entered successfully");
+          db.close();
+          callback("ok");
+			  }
+		  });
+	  });	
+}
+
+//Add user admin util
+var addUserInDB = function(userData, callback){
+	db.open(function(error){
+	  closureaddUserInDB(userData, callback, db);
+	});
+}
+
+var closureaddUserInDB = function(userData,callback,db){	
+	  db.collection("credentials", function(error, collection) {
+		  collection.insert(userData,function(err,inserted){
+			  if(err){
+          db.close();
+          callback("error");
+				  console.log("Some error occured in db report entry");
+			  }
+			  else{
+          db.close();
+          callback("ok");
+				  console.log("db report Inserted successfully");
+			  }		  
+		  });
+	  });
+}
+
+// get user email address
+var getEmail = function(username, callback){
+	db.open(function(error){
+	    closuregetEmail(username, callback, db);
+	  });
+}
+
+var closuregetEmail = function(username, callback, db){
+	  db.collection("credentials", function(error, collection) {
+		  collection.find({"username":username}, function(error, cursor){
+        cursor.toArray(function(errorarray, data){
+          if(data[0] == undefined){
+            db.close(); 
+            callback(false);
+          } else {
+            db.close(); 
+            callback(data[0].email);
+          }
+        });
+      });
+	  });
+}
+
+
+// get all tool data on server
+var getAllTools = function(callback){
+	db.open(function(error){
+	    closuregetAllTools(callback, db);
+	  });
+}
+
+var closuregetAllTools = function(callback, db){
+	  db.collection("toolData", function(error, collection) {
+		  collection.find(function(error, cursor){
+        cursor.toArray(function(errorarray, data){
+          var toolData = [];
+          for(var i=0; i<data.length; i++){
+            toolData.push({"toolID":data[i].toolID, "toolName":data[i].toolName, "toolNPM":data[i].toolNPM});
+          }
+          if(error){
+            db.close(); 
+            callback("error");
+          } else {
+            db.close(); 
+            callback(toolData);
+          }
+        });
+      });
+	  });
+}
+
+// get all active clients
+var getAllActiveClients = function(callback){
+	db.open(function(error){
+	    closuregetAllActiveClients(callback, db);
+	  });
+}
+
+var closuregetAllActiveClients = function(callback, db){
+	  db.collection("toolsCollection", function(error, collection) {
+		  collection.find({"status":"Active"} ,function(error, cursor){
+        cursor.toArray(function(errorarray, data){
+          var clientData = [];
+          for(var i=0; i<data.length; i++){
+            clientData.push(data[i].clientID);
+          }
+          if(error){
+            db.close(); 
+            callback("error");
+          } else {
+            db.close(); 
+            callback(clientData);
+          }
+        });
+      });
+	  });
+}
+
 exports.performHeartBeat = performHeartBeat;
 exports.insertClientIDIntoDB = insertClientIDIntoDB;
 exports.getclientStatusData = getclientStatusData;
@@ -237,3 +428,11 @@ exports.getClientData = getClientData;
 exports.fetchJSONReportInDB = fetchJSONReportInDB;
 exports.storeJSONReportInDB = storeJSONReportInDB;
 exports.isValidCredential = isValidCredential;
+exports.getUserClientMapping = getUserClientMapping;
+exports.addToolInfo = addToolInfo;
+exports.addClientUserMapping = addClientUserMapping;
+exports.addUserInDB = addUserInDB;
+exports.getClientIds = getClientIds;
+exports.getEmail = getEmail;
+exports.getAllTools = getAllTools;
+exports.getAllActiveClients = getAllActiveClients;
