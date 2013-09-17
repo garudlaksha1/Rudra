@@ -248,11 +248,7 @@ var getUserClientMapping = function(username, callback){
 
 var closuregetUserClientMapping = function(username, callback, db){
 	  db.collection("userClientMapping", function(error, collection) {
-<<<<<<< HEAD
-		  collection.find({"userName":username}, function(error, cursor){
-=======
 		  collection.find({"username":username}, function(error, cursor){
->>>>>>> gaurav
         cursor.toArray(function(errorarray, data){
           if(data[0] == undefined){
             db.close(); 
@@ -266,8 +262,6 @@ var closuregetUserClientMapping = function(username, callback, db){
 	  });
 }
 
-<<<<<<< HEAD
-=======
 //Admin addtool funtion
 var addToolInfo = function(toolData, callback){
 	db.open(function(error){
@@ -425,7 +419,6 @@ var closuregetAllActiveClients = function(callback, db){
 	  });
 }
 
->>>>>>> gaurav
 exports.performHeartBeat = performHeartBeat;
 exports.insertClientIDIntoDB = insertClientIDIntoDB;
 exports.getclientStatusData = getclientStatusData;
@@ -435,9 +428,6 @@ exports.getClientData = getClientData;
 exports.fetchJSONReportInDB = fetchJSONReportInDB;
 exports.storeJSONReportInDB = storeJSONReportInDB;
 exports.isValidCredential = isValidCredential;
-<<<<<<< HEAD
-exports.getUserClientMapping = getUserClientMapping;
-=======
 exports.getUserClientMapping = getUserClientMapping;
 exports.addToolInfo = addToolInfo;
 exports.addClientUserMapping = addClientUserMapping;
@@ -446,4 +436,3 @@ exports.getClientIds = getClientIds;
 exports.getEmail = getEmail;
 exports.getAllTools = getAllTools;
 exports.getAllActiveClients = getAllActiveClients;
->>>>>>> gaurav

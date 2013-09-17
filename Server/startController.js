@@ -184,15 +184,6 @@ app.get('/getclients/:username', function(req, res){
   });
 });
 
-<<<<<<< HEAD
-app.get('/getclients/:username', function(req, res){
-  userName = req.params.username;
-  db.getUserClientMapping(userName, function(status){
-    if(status == false){
-      res.send("No clients");
-    } else {
-      res.send(status);
-=======
 app.post('/admin/uploadtoolserver/:toolID/:toolName/:toolNPM', function(req, res){
   var toolID = req.params.toolID;
   var toolName = req.params.toolName;
@@ -282,7 +273,6 @@ app.get('/admin/getallclients/', function(req, res){
       res.status(404).send("error in action");
     } else {
       res.send({"clientID":clients});
->>>>>>> gaurav
     }
   });
 });
