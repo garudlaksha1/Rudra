@@ -7,5 +7,23 @@
      "options" : null,
      "optionValue" : null,      
     "commandOption": ""
+  },
+"Verbose" :
+  {
+    "description": "Turn on Verbose",     
+    "type" : "option",                               
+    "default value" : "on", 
+     "options" : ["Yes","No"],
+     "optionValue" : ["on","off"],      
+    "commandOption": "-v"
+  },
+"OS" :
+  {
+    "description": "OS detection enable",     
+    "type" : "option",                               
+    "default value" : "on", 
+     "options" : ["Yes","No"],
+     "optionValue" : ["on","off"],      
+    "commandOption": "-O"
   }
 }

@@ -27,13 +27,22 @@ var runTool = function (scanID, userJSONData, callback){
 		configJSONData = JSON.parse(configJSONData);		//parsing json data from config file
 
 		var str=";";
-		if(userJSONData.URL.value.indexOf(str) > -1)		//Checking for malicious data such as ';'
+		if(userJSONData.URL.value.indexOf(str) > -1 ||
+       userJSONData.Verbose.value.indexOf(str) > -1 ||
+       userJSONData.All.value.indexOf(str) > -1 )		//Checking for malicious data such as ';'
 			callback("User input is Malicious");	
 		else{		
       var sqlMapPath = configPath + "sqlmap/sqlmap.py";
+      console.log(userJSONData.URL.value);
       var JSONinput ="", JSONoutput="", message = "";
       var data = [];
-      cp.exec("c:/Python27/python.exe " + sqlMapPath + " " + configJSONData.URL.commandOption +" "+userJSONData.URL.value+"--wizard --batch --threads=10", function (err, stdout, stderr) {
+      var command = "c:/Python27/python.exe " + sqlMapPath + " ";  
+      if(userJSONData.All.value == "On"){ 
+        command = command + configJSONData.All.commandOption + " ";  
+      }
+      command = command + configJSONData.Verbose.commandOption + " ";
+      command = command + configJSONData.URL.commandOption +" "+userJSONData.URL.value+" --wizard --batch --threads=10";
+      cp.exec(command, function (err, stdout, stderr) {
         console.log(stdout);
         var arr = stdout.split('\n');				//split data into lines
         for(var i=0;i<arr.length;i++) {
@@ -58,9 +67,9 @@ var runTool = function (scanID, userJSONData, callback){
             message = "";
           }
         }
-        var datasend = {"data":data}
-        callback(datasend);
-        console.log(datasend);  
+        var datasend = {"scanID":scanID,"data":data};
+        console.log(datasend);
+        callback(datasend);  
       });	
 		}
 	});

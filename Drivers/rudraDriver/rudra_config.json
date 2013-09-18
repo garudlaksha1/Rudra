@@ -1,0 +1,20 @@
+{
+  "Attack" :                                          
+  {
+    "description": "Select Attack: ",     
+    "type" : "options",                               
+    "default value" : null, 
+    "options" : ["sql injection", "XSS", "application exception"],
+    "optionValue" : ["sqli", "XSS", "appexp"],      
+    "commandOption": ""
+  },
+  "JSON":
+  {
+    "description": "Input JSON: ",     
+    "type" : "options",                               
+    "default value" : null, 
+    "options" : ["sql injection", "XSS", "application exception"],
+    "optionValue" : ["sqli", "XSS", "appexp"],      
+    "commandOption": ""
+  }
+}

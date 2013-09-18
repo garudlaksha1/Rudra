@@ -27,13 +27,22 @@ var runTool = function (scanID, userJSONData, callback){
 		configJSONData = JSON.parse(configJSONData);		//parsing json data from config file
 
 		var str=";";
-		if(userJSONData.IP.value.indexOf(str) > -1)		//Checking for malicious data such as ';'
+		if(userJSONData.IP.value.indexOf(str) > -1 || 
+       userJSONData.Verbose.value.indexOf(str) > -1 ||
+       userJSONData.OS.value.indexOf(str) > -1 )		//Checking for malicious data such as ';'
 			callback("User input is Malicious");	
 		else{		
-      //var sqlMapPath = configPath + "sqlmap/sqlmap.py";
       var JSONinput ="", JSONoutput="", message = "";
       var data = [];
-      cp.exec("nmap " + configJSONData.IP.commandOption +" "+userJSONData.IP.value, function (err, stdout, stderr) {
+      var command = "nmap ";
+      if(userJSONData.Verbose.value == "On"){ 
+        command = command + configJSONData.Verbose.commandOption + " ";
+      }
+      if(userJSONData.OS.value == "On"){ 
+        command = command + configJSONData.OS.commandOption + " ";
+      }
+      command = command + configJSONData.IP.commandOption +" "+userJSONData.IP.value;
+      cp.exec(command, function (err, stdout, stderr) {
         console.log(stdout);
         JSONinput = userJSONData.IP.value;
         JSONoutput = stdout;
