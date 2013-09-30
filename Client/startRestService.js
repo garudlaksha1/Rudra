@@ -10,6 +10,7 @@ var express = require('express')
 var app = express();
 //var scanID = 0;
 var clientID;
+var sessionID;
 var server = process.argv[2];
 var serverPort = process.argv[3];
 var clientPort = process.argv[4];
@@ -20,86 +21,97 @@ app.configure(function(){
   app.use(express.bodyParser());
 });
 
-app.get("/tool/:action/:toolID", function(req, res){
+app.get("/tool/:action/:toolID/:sessionID", function(req, res){
   var toolID = req.params.toolID;
   var action = req.params.action;
+  var session = req.params.sessionID;
   console.log(toolID);
-  if (action == "getinfo"){
-    mongoDB.getToolMapping(toolID, function(data){
-      console.log(JSON.stringify(data));
-      if (data != "nil"){
-        var toolToCall = require(data.toolNPM);
-        toolToCall.getToolInfo(function(toolInfo){
-          res.contentType('application/json');
-          res.status(200).send(JSON.stringify(toolInfo));
-        });
-      } else {
-        res.status(404).send("invalid tool id");
-      } 
-    });
+  if (session == sessionID){
+    if (action == "getinfo"){
+      mongoDB.getToolMapping(toolID, function(data){
+        console.log(JSON.stringify(data));
+        if (data != "nil"){
+          var toolToCall = require(data.toolNPM);
+          toolToCall.getToolInfo(function(toolInfo){
+            res.contentType('application/json');
+            res.status(200).send(JSON.stringify(toolInfo));
+          });
+        } else {
+          res.status(404).send("invalid tool id");
+        } 
+      });
+    } else {
+      res.status(404).send("invalid action");
+    }
   } else {
-    res.status(404).send("invalid action");
+    res.status(404).send("invalid session");
   }
 });
 
-app.post("/tool/:action/:toolID/:scanID", function(req, res){
+app.post("/tool/:action/:toolID/:scanID/:sessionID", function(req, res){
   var toolID = req.params.toolID;
   var action = req.params.action;
   var scanID = req.params.scanID;
+  var session = req.params.sessionID;
   var toolRunInfo = req.body;
-  
-  if (action == "runtool"){
-    mongoDB.getToolMapping(toolID, function(data){
-      console.log(JSON.stringify(data));
-      if (data != "nil"){
-        var toolToCall = require(data.toolNPM);
-        //scanID = scanID + 1;
-        toolToCall.runTool(scanID, toolRunInfo, function(reportData){
-          //res.contentType('application/json');
-          mongoDB.storeJSONReportInDB(reportData, function(status){
-            if(status == "ok"){
-              //call reporting on server
-              var options = {
-                host: server,
-                port: serverPort,
-                path: '/reportsubmit/',
-                method: 'POST',
-                headers: {
-                  'content-type':'application/json'
-                }
-              };
-              var req = http.request(options, function(res) {
-                res.setEncoding('utf8');
-                res.on('data', function (chunk) {
-                  console.log("server report added: " + chunk);
+  if(session == sessionID){
+    if (action == "runtool"){
+      mongoDB.getToolMapping(toolID, function(data){
+        console.log(JSON.stringify(data));
+        if (data != "nil"){
+          var toolToCall = require(data.toolNPM);
+          //scanID = scanID + 1;
+          toolToCall.runTool(scanID, toolRunInfo, function(reportData){
+            //res.contentType('application/json');
+            mongoDB.storeJSONReportInDB(reportData, function(status){
+              if(status == "ok"){
+                //call reporting on server
+                var options = {
+                  host: server,
+                  port: serverPort,
+                  path: '/reportsubmit/',
+                  method: 'POST',
+                  headers: {
+                    'content-type':'application/json'
+                  }
+                };
+                var req = http.request(options, function(res) {
+                  res.setEncoding('utf8');
+                  res.on('data', function (chunk) {
+                    console.log("server report added: " + chunk);
+                  });
                 });
-              });
-              req.write(JSON.stringify(reportData));
-              req.end();
-            } else { 
-              console.log("error inserting in db");
-              res.status(404).send("error in action");     
-            }
+                req.write(JSON.stringify(reportData));
+                req.end();
+              } else { 
+                console.log("error inserting in db");
+                res.status(404).send("error in action");     
+              }
+            });
           });
-        });
-        res.status(200).send("ok");
-      } else {
-        res.status(404).send("invalid tool id");
-      }    
-    });
+          res.status(200).send("ok");
+        } else {
+          res.status(404).send("invalid tool id");
+        }    
+      });
+    } else {
+      res.status(404).send("invalid action");
+    }
   } else {
-    res.status(404).send("invalid action");
+    res.status(404).send("invalid session");
   }
 });
 
-app.post('/toolconfig/addtool/:toolID/:toolName/:toolNPM', function(req, res) {
+app.post('/toolconfig/addtool/:toolID/:toolName/:toolNPM/:sessionID', function(req, res) {
   //console.log(req.files);
   var toolID = req.params.toolID;
   var toolName = req.params.toolName;
   var toolNPM = req.params.toolNPM;
+  var session = req.params.sessionID;
   
-  var toolData = {"toolID":toolID, "toolName":toolName, "toolNPM":toolNPM};
-  console.log(JSON.stringify(toolData));
+  if(session == sessionID){ 
+    var toolData = {"toolID":toolID, "toolName":toolName, "toolNPM":toolNPM};
+    console.log(JSON.stringify(toolData));
 
       fs.readFile(req.files.module.path, function (err, data) {
         var newPath = __dirname + "/"+req.files.module.name;
@@ -116,7 +128,10 @@ app.post('/toolconfig/addtool/:toolID/:toolName/:toolNPM', function(req, res) {
             }
           });     //mongo close
         });
-      });  
+      });
+  } else {
+    res.status(404).send("invalid session ID");
+  }  
 });
 
 app.post('/engineconfig/', function(req, res) {
@@ -195,8 +210,13 @@ function heartBeat(){
 
     var req = http.request(options, function(res) {
       res.setEncoding('utf8');
+      var str = '';
       res.on('data', function (chunk) {
-        console.log("body: " + chunk);
+        str += chunk;
+      });
+      res.on('end', function(){
+        sessionID = JSON.parse(str).sessionID;
+        console.log(sessionID);
       });
     });
     req.write(JSON.stringify(resData));

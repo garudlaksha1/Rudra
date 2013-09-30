@@ -15,32 +15,33 @@ app.configure(function(){
   app.use(express.bodyParser());
 });
 
-app.post('/gettoolinfo/', function(req, res){
-  var toolData = req.body;
-  var clientID = toolData.clientID;
-  var toolID = toolData.toolID;
-  console.log(toolData);
-  db.getClientData(clientID, function(clientData){
-    var options = {
-      host: clientData.clientIP,
-      port: clientData.clientPort,
-      path: "/tool/getinfo/"+toolID,
-      method: 'GET'
-    };
-    callback = function(response) {
-      var str = '';
-      //another chunk of data has been recieved, so append it to `str`
-      response.on('data', function (chunk) {
-        str += chunk;
-      });
+app.get('/gettoolinfo/:clientID/:toolID/', function(req, res){
+  var clientID = req.params.clientID;
+  var toolID = req.params.toolID;
+  //console.log(toolData);
+  db.getClientSessionID(clientID, function(sessionID){
+    db.getClientData(clientID, function(clientData){
+      var options = {
+        host: clientData.clientIP,
+        port: clientData.clientPort,
+        path: "/tool/getinfo/"+toolID+"/"+sessionID,
+        method: 'GET'
+      };
+      callback = function(response) {
+        var str = '';
+        //another chunk of data has been recieved, so append it to `str`
+        response.on('data', function (chunk) {
+          str += chunk;
+        });
 
-      //the whole response has been recieved, so we just print it out here
-      response.on('end', function () {
-        console.log(str);
-        res.send(str);
-      });
-    }
-    http.request(options, callback).end();  
+        //the whole response has been recieved, so we just print it out here
+        response.on('end', function () {
+          console.log(str);
+          res.send(str);
+        });
+      }
+      http.request(options, callback).end();  
+    });
   });
 });
 
@@ -49,28 +50,30 @@ app.post('/runtool/:clientID/:toolID', function(req, res){
   var toolID = req.params.toolID;
   var runInfo = req.body;
   scanID = scanID + 1;
-  db.getClientData(clientID, function(clientData){
-    var options = {
-      host: clientData.clientIP,
-      port: clientData.clientPort,
-      path: '/tool/runtool/'+toolID+'/'+scanID,
-      method: 'POST',
-      headers: {
-        'content-type':'application/json'
-      }
-    };
-    var req = http.request(options, function(runRes) {
-      runRes.setEncoding('utf8');
-      runRes.on('data', function (runStatus) {
-        if(runStatus == "ok"){
-          res.send({"scanID":scanID});
-        } else {
-          res.status(404).send("error in action"); 
-        }        
+  db.getClientSessionID(clientID, function(sessionID){
+    db.getClientData(clientID, function(clientData){
+      var options = {
+        host: clientData.clientIP,
+        port: clientData.clientPort,
+        path: '/tool/runtool/'+toolID+'/'+scanID+'/'+sessionID,
+        method: 'POST',
+        headers: {
+          'content-type':'application/json'
+        }
+      };
+      var req = http.request(options, function(runRes) {
+        runRes.setEncoding('utf8');
+        runRes.on('data', function (runStatus) {
+          if(runStatus == "ok"){
+            res.send({"scanID":scanID});
+          } else {
+            res.status(404).send("error in action"); 
+          }        
+        });
       });
-    });
-    req.write(JSON.stringify(runInfo));
-    req.end();
+      req.write(JSON.stringify(runInfo));
+      req.end();
+    });  
   });
 });
 
@@ -92,31 +95,33 @@ app.post('/admin/pushtoolclient/', function(req, res){
   var nodeData = req.body;
   var clientID = nodeData.clientID;
   console.log(nodeData);
-  db.getToolData(nodeData.toolID, function(data){
-    db.getClientData(clientID, function(clientData){
-      var addToolpath = '/toolconfig/addtool/'+ nodeData.toolID + '/'+ data.toolName +'/'+ data.toolNPM;
-      console.log(addToolpath);
-      var form = new FormData();
-      form.append('my_field', 'my value');
-      form.append('my_buffer', new Buffer(10));
-      form.append('module', fs.createReadStream('./tools/'+ data.toolNPM +'.zip'));
-      var request = http.request({
-        method: 'POST',
-        host: clientData.clientIP,
-        port: clientData.clientPort,
-        path: addToolpath,
-        headers: form.getHeaders()
-      });
+  db.getClientSessionID(clientID, function(sessionID){
+    db.getToolData(nodeData.toolID, function(data){
+      db.getClientData(clientID, function(clientData){
+        var addToolpath = '/toolconfig/addtool/'+ nodeData.toolID + '/'+ data.toolName +'/'+ data.toolNPM+'/'+sessionID;
+        console.log(addToolpath);
+        var form = new FormData();
+        form.append('my_field', 'my value');
+        form.append('my_buffer', new Buffer(10));
+        form.append('module', fs.createReadStream('./tools/'+ data.toolNPM +'.zip'));
+        var request = http.request({
+          method: 'POST',
+          host: clientData.clientIP,
+          port: clientData.clientPort,
+          path: addToolpath,
+          headers: form.getHeaders()
+        });
     
-      form.pipe(request);
+        form.pipe(request);
 
-      request.on('response', function(resEngine) {
-        console.log(resEngine.statusCode);
-        if(resEngine.statusCode == "200"){
-          res.status(200).send({"status":"Success"});
-        } else {
-          res.status(404).send({"status":"Fail"});
-        }
+        request.on('response', function(resEngine) {
+          console.log(resEngine.statusCode);
+          if(resEngine.statusCode == "200"){
+            res.status(200).send({"status":"Success"});
+          } else {
+            res.status(404).send({"status":"Fail"});
+          }
+        });
       });
     });
   });
@@ -143,19 +148,24 @@ app.get("/register/:clientPort/:clientID", function(req, res){
 app.post("/heartbeat/:clientID",function(req,res){
 	var clientID = req.params.clientID;
 	var toolList = req.body.toolList;
+  var sessionID = Math.floor((Math.random()*10000)+1);
   var status = "Active";
   console.log(toolList);
   console.log(clientID);
+  var currentTime = new Date().getTime();
+  var callback = function(status){
+    if(status == true){
+      res.send({"status":"Success","sessionID":sessionID});
+    } else {
+      res.send({"status":"Invalid"});
+    }
+  }
   db.getclientStatusData(clientID, function(clientStatus){
     console.log(clientStatus);
     if(clientStatus == true){
-      db.updateHeartBeatStatus(clientID, status, toolList, function(){
-        res.send("Success");
-      });
+      db.updateHeartBeatStatus(clientID, status, currentTime, toolList, sessionID, callback);
     } else {
-      db.performHeartBeat(clientID, status, toolList, function(){
-        res.send("Success");
-      });
+      db.performHeartBeat(clientID, status, currentTime, toolList, sessionID, callback);
     }
   });
 });
@@ -191,21 +201,33 @@ app.post('/admin/uploadtoolserver/:toolID/:toolName/:toolNPM', function(req, res
   var toolData = {"toolID":toolID, "toolName":toolName, "toolNPM":toolNPM};
   console.log(JSON.stringify(toolData));
   console.log(req.files);
-  fs.readFile(req.files.filename.path, function (err, data) {
-    var newPath = __dirname + "/tools/"+req.files.filename.name;
-    fs.writeFile(newPath, data, function (err) {
-      if (err) throw err;
-      res.send("ok");
-      db.addToolInfo(toolData, function(status){
-        if (status == "ok"){
-          res.status(200).send({"status":"Success"});
-        } else { 
-          console.log("error inserting in db");
-          res.status(404).send({"status":"Fail"});     
-        }
+  if(req.files.filename.name == ''){
+    console.log("No ZIP to upload");
+    db.addToolInfo(toolData, function(status){
+      if (status == "ok"){
+        res.status(200).send({"status":"Success"});
+      } else { 
+        console.log("error inserting in db");
+        res.status(404).send({"status":"Fail"});     
+      }
+    });
+  }
+  else {
+      fs.readFile(req.files.filename.path, function (err, data) {
+      var newPath = __dirname + "/tools/"+req.files.filename.name;
+      fs.writeFile(newPath, data, function (err) {
+        if (err) throw err;
+        db.addToolInfo(toolData, function(status){
+          if (status == "ok"){
+            res.status(200).send({"status":"Success"});
+          } else { 
+            console.log("error inserting in db");
+            res.status(404).send({"status":"Fail"});     
+          }
+        });
       });
     });
-  });
+  }
 });
 
 app.post('/admin/userclientmap/', function(req, res){
@@ -277,10 +299,44 @@ app.get('/admin/getallclients/', function(req, res){
   });
 });
 
-var changeClientStatus = function(){
-  //setTimeout(changeClientStatus, 20000)
+app.get('/admin/deleteservertool/:toolID', function(req, res){
+  toolID = req.params.toolID;
+  db.getToolData(toolID, function(toolData){
+    var newPath = __dirname + "/tools/"+toolData.toolNPM+".zip";
+    fs.unlink(newPath, function(err){
+      if (err) console.log("error deleting zip file");
+      db.removeToolData(toolID, function(status){
+        if(status == "ok"){
+          res.send({"status":"Success"});
+        } else {
+          res.status(404).send({"status":"Fail"});
+        }
+      });
+    });
+  });
+});
+
+function changeClientStatus(){
+  var currentTime = new Date().getTime();
+  db.getAllActiveClientTime(function(clients){
+    for(var i=0; i<clients.length; i++){
+      if((currentTime - clients[i].timestamp) > 20*1000){
+        console.log("deactivate"+clients[i].clientID);
+        db.updateClientStatus(clients[i].clientID, "Inactive", function(status){
+          if(status == "ok"){
+            console.log("deactivated..");
+          } else {
+            console.log("error in DB entry");
+          }
+        });
+      } 
+    }
+    setTimeout(changeClientStatus, 30000);
+  });
 }
 
 http.createServer(app).listen(app.get('port'), function(){
   console.log("listening");
 });
+
+changeClientStatus();

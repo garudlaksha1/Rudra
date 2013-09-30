@@ -28,6 +28,7 @@ var closureinsertClientIDIntoDB = function(id, clientIP, clientPort, callback, d
 			  if(err){
           db.close();
 				  console.log("Some error occured in client db insertion");
+          callback();
 			  }
 			  else{
 				  console.log("client entered successfully");
@@ -59,27 +60,30 @@ var closuregetClientIds = function(clientID, callback, db){
 
 //Utility function for heartbeat operation
 
-var performHeartBeat = function(id, status, toolsArray, callback) {
+var performHeartBeat = function(id, status, currentTime, toolsArray, sessionID, callback) {
 	db.open(function(error){
-    closureperformHeartBeat(id, status, toolsArray, callback, db);
+    closureperformHeartBeat(id, status, currentTime, toolsArray, sessionID, callback, db);
   });
 }
 
-var closureperformHeartBeat = function(id, status, toolsArray, callback, db){  
+var closureperformHeartBeat = function(id, status, currentTime, toolsArray, sessionID, callback, db){  
 		var createStatusForClient = {
 		  "clientID":id,
 		  "status":status,
-		  "toolList":toolsArray
+      "timestamp":currentTime,
+		  "toolList":toolsArray,
+      "sessionID":sessionID
 		};
 	  db.collection("toolsCollection", function(error, collection) {
 		  collection.insert(createStatusForClient,function(err,inserted){
 			  if(err){
           db.close();
 				  console.log("Some error occured in 1st heartbeat");
+          callback(false);
 			  }
 			  else{
           db.close();
-          callback();
+          callback(true);
 				  console.log("Client heart beat Inserted successfully");
 			  }			  
 		  });
@@ -112,22 +116,23 @@ var closuregetclientStatusData = function(id, callback, db){
 }
 
 // utility to update toolList after heartbeats
-var updateHeartBeatStatus = function(id, status, toolsArray, callback) {
+var updateHeartBeatStatus = function(id, status, currentTime, toolsArray, sessionID, callback) {
   db.open(function(error){
-    closureupdateHeartBeatStatus(id, status, toolsArray, callback, db);
+    closureupdateHeartBeatStatus(id, status, currentTime, toolsArray, sessionID, callback, db);
   });	
 }
 
-var closureupdateHeartBeatStatus = function(id, status, toolsArray, callback, db){
+var closureupdateHeartBeatStatus = function(id, status, currentTime, toolsArray, sessionID, callback, db){
 	  db.collection("toolsCollection", function(error, collection) {
-		  collection.update({"clientID":id},{$set:{"status":status,"toolList":toolsArray}}, function(err,inserted){
+		  collection.update({"clientID":id},{$set:{"status":status,"timestamp":currentTime,"toolList":toolsArray,"sessionID":sessionID}}, function(err,inserted){
 			  if(err){
           db.close();
 				  console.log("Some error occured");
+          callback(false);
 			  }
 			  else{
           db.close();
-          callback();
+          callback(true);
 			  }
 		  });
 	  });
@@ -183,6 +188,7 @@ var closurestoreJSONReportInDB = function(reportObj,callback,db){
 			  if(err){
           db.close();
 				  console.log("Some error occured in db report entry");
+          callback("error");
 			  }
 			  else{
           db.close();
@@ -271,15 +277,20 @@ var addToolInfo = function(toolData, callback){
 
 var closureaddToolInfo = function(toolData,callback,db){	
 	  db.collection("toolData", function(error, collection) {
-		  collection.insert(toolData,function(err,inserted){
+		  collection.findAndModify({"toolID":toolData.toolID},
+                               [['_id','asc']],
+                               {$set: {"toolName":toolData.toolName, "toolNPM":toolData.toolNPM}},
+                               {upsert:true}, 
+                               function(err,inserted){
 			  if(err){
           db.close();
-				  console.log("Some error occured in db report entry");
+				  console.log("Some error occured in db tool entry");
+          callback("error");
 			  }
 			  else{
           db.close();
-          callback("ok");
 				  console.log("db tool Inserted successfully");
+          callback("ok");
 			  }
 			  
 		  });
@@ -329,13 +340,13 @@ var closureaddUserInDB = function(userData,callback,db){
 		  collection.insert(userData,function(err,inserted){
 			  if(err){
           db.close();
-          callback("error");
 				  console.log("Some error occured in db report entry");
+          callback("error");
 			  }
 			  else{
           db.close();
-          callback("ok");
 				  console.log("db report Inserted successfully");
+          callback("ok");
 			  }		  
 		  });
 	  });
@@ -419,6 +430,101 @@ var closuregetAllActiveClients = function(callback, db){
 	  });
 }
 
+// remove server tool
+var removeToolData = function(toolID, callback){
+	db.open(function(error){
+	    closureremoveToolData(toolID, callback, db);
+	  });
+}
+
+var closureremoveToolData = function(toolID, callback, db){
+	  db.collection("toolData", function(error, collection) {
+		  collection.remove({"toolID":toolID}, function(error, removed){
+        if(error) {
+          db.close();
+          callback("error");
+        }
+        else {
+          db.close();
+          callback("ok");
+        }
+      });
+	  });
+}
+
+// get all active clients and timestamp
+var getAllActiveClientTime = function(callback){
+	db.open(function(error){
+	    closuregetAllActiveClientTime(callback, db);
+	  });
+}
+
+var closuregetAllActiveClientTime = function(callback, db){
+	  db.collection("toolsCollection", function(error, collection) {
+		  collection.find({"status":"Active"} ,function(error, cursor){
+        cursor.toArray(function(errorarray, data){
+          var clientData = [];
+          for(var i=0; i<data.length; i++){
+            clientData.push({"clientID":data[i].clientID, "timestamp":data[i].timestamp});
+          }
+          if(error){
+            db.close(); 
+            callback("error");
+          } else {
+            db.close(); 
+            callback(clientData);
+          }
+        });
+      });
+	  });
+}
+
+// utility to update client Status
+var updateClientStatus = function(id, status, callback) {
+  db.open(function(error){
+    closureupdateClientStatus(id, status, callback, db);
+  });	
+}
+
+var closureupdateClientStatus = function(id, status, callback, db){
+	  db.collection("toolsCollection", function(error, collection) {
+		  collection.update({"clientID":id},{$set:{"status":status}}, function(err,inserted){
+			  if(err){
+          db.close();
+				  console.log("Some error occured");
+          callback("error");
+			  }
+			  else{
+          db.close();
+          callback("ok");
+			  }
+		  });
+	  });
+}
+
+// get client Session ID
+var getClientSessionID = function(clientID, callback){
+	db.open(function(error){
+	    closuregetClientSessionID(clientID, callback, db);
+	  });
+}
+
+var closuregetClientSessionID = function(clientID, callback, db){
+	  db.collection("toolsCollection", function(error, collection) {
+		  collection.find({"clientID":clientID} ,function(error, cursor){
+        cursor.toArray(function(errorarray, data){
+          if(data[0] == undefined){
+            db.close(); 
+            callback(false);
+          } else {
+            db.close(); 
+            callback(data[0].sessionID);
+          }
+        });
+      });
+	  });
+}
+
 exports.performHeartBeat = performHeartBeat;
 exports.insertClientIDIntoDB = insertClientIDIntoDB;
 exports.getclientStatusData = getclientStatusData;
@@ -436,3 +542,7 @@ exports.getClientIds = getClientIds;
 exports.getEmail = getEmail;
 exports.getAllTools = getAllTools;
 exports.getAllActiveClients = getAllActiveClients;
+exports.removeToolData = removeToolData;
+exports.getAllActiveClientTime = getAllActiveClientTime;
+exports.updateClientStatus = updateClientStatus;
+exports.getClientSessionID = getClientSessionID;
