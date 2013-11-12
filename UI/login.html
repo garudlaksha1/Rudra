@@ -1,0 +1,134 @@
+<html>
+
+	<head>
+	<title> Rudra </title>
+	
+	<script src = "jquery-ui/js/jquery-1.9.1.js"></script>
+	<script src="jquery-ui/js/jquery-ui-1.10.3.custom.js"></script>
+	<link rel="stylesheet"  type="text/css" href="jquery-ui/css/overcast/jquery-ui-1.10.3.custom.css">
+	
+	<style>
+	
+		div.container{
+			
+				border-style:solid;
+				border-width:2px;
+				border-color: #1A3972;
+				margin: auto;
+				//background-color: #B6CDEF;
+				width:50%
+		}
+		
+	</style>
+	
+	<script>
+	
+			window.history.forward();
+    function noBack() { window.history.forward(); }
+	
+			$.urlParam = function(name){
+							var results = new RegExp('[\\?]' + name + '=([^&#]*)').exec(window.location.href);
+							if (results==null){
+									return null;
+								}
+								else{
+								   return results[1] || 0;
+								}
+}
+		
+			$(function() {			
+				
+				$( "#button" ).button();
+				$( "#radioset" ).buttonset();		
+				$( "#tabs" ).tabs();	
+			
+			});		
+
+				
+				$(document).ready(function(){
+				
+						//alert('hello' + window.location.pathname + ' ');
+						var err = $.urlParam('error_code');
+					//	alert('hello' + $.urlParam('error_code'));
+						if(err==0){
+						var el = document.getElementById('errorMsg');
+						el.style.display = 'inline';
+						}
+				});
+					
+			</script>	
+	</head>
+<body onload="noBack();"
+    onpageshow="if (event.persisted) noBack();" onunload="">
+
+<div id="header">
+
+	<h1>
+			<img src="./img/Rudra.jpg" alt="Rudra" height="132" width="132">
+	</h1>
+	
+	<br>
+	
+</div>
+
+<div class ="container">	
+	<tr>
+		<td></td>
+		<td></td>
+		<td></td>
+	</tr>
+	<br>
+	<table  width="100%" style="font-size:20px" border=0>
+	<tr>
+		
+		<td>
+		<form method="post" action="./Login/login_check.php"  >
+		<div id="errorMsg"align="left" style="display:none; color: #ff0000">
+			<p> Username or password is incorrect. Please re-enter credentials. </p>
+		</div>
+		<div align="center">
+			<p> Username: <input type="text" name="username" /> </p>
+		</div>
+		<div align="center">
+			<p> Password: <input type="password" name="password" /> </p>
+		</div>
+		<div align="center">
+			<p><input type="submit" id="button" value="Login" />  </p>
+		</div>
+		</td>
+		</tr>
+		<tr>
+		<td align="center">
+			<table border=0 width="100%" style="font-size:15px">
+				<tr>
+					<td align="right">
+								<input data-val="true" data-val-required="The RememberMe field is required." id="RememberMe" name="RememberMe" type="checkbox" value="true">
+								<input name="RememberMe" type="hidden" value="false">
+								<label for="RememberMe">Remember Me</label>		
+					</td>
+					<td align="center">
+								<a href="./Login/password_reset.php">Can not access your account?</a>
+					</td>
+				</tr>
+			</table>
+		</td>
+						
+ </tr>			
+ </table>
+			<p>
+		</div>
+		
+		<div>
+			
+		</div>
+	</form>
+ </div> 
+ 
+ <footer>
+	<div class="footer1">
+	</div>
+</footer>	
+ 
+ </body>
+ 	 
+ </html>
