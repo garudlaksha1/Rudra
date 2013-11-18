@@ -30,12 +30,12 @@
 		
 		if($curl_response['status'] == "Success")
 		{
-			echo "<div align='right' style='color:#ff1014'><a href=\"../home.php\"><b>back</b></a> </div><br>";
+			echo "<div align='right' style='color:#ff1014'><a href=\"../home.php\">back</a> </div><br>";
 			echo "<br> {$toolID} is removed from server";
 		}
 		else
 		{
-			echo "<div align='right' style='color:#ff1014'><a href=\"../home.php\"><b>back</b></a> </div><br>";
+			echo "<div align='right' style='color:#ff1014'><a href=\"../home.php\">back</a> </div><br>";
 			echo "<br> {$toolID} removal is unsuccessful";
 		}
 	}
@@ -44,13 +44,15 @@
 	{
 		echo "<div  align='left' style='background:#AAAAAA;color:#ffffff'>Upload Tool </div> <br> ";
 		echo "<div align='right' style='color:#ff1014'><a href=\"../home.php\">back</a> </div><br>";
-		echo "<form id=\"uploadToolForm\" method=\"POST\" action=\"./upload_tool_to_server.php\">";
-		echo "<div align= 'center'> Enter tool ID:";
+		echo "<form id=\"uploadToolForm\" method=\"POST\" action=\"./upload_tool_to_server.php\" enctype=\"multipart/form-data\">";
+		echo "<div align= 'center'> Enter tool ID:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
 		echo "<input type=\"text\" name=\"txtToolID\"></div>";
-		echo "<div align= 'center'> Enter tool Name:";
+		echo "<div align= 'center'> Enter tool Name:&nbsp;&nbsp;&nbsp;";
 		echo "<input type=\"text\" name=\"txtToolName\"></div>";
-		echo "<div align= 'center'> Enter tool NPM:";
-		echo "<input type=\"text\" name=\"txtToolNPM\"></div>";
+		echo "<div align= 'center'> Enter tool NPM:&nbsp;&nbsp;&nbsp;";
+		echo "<input type=\"text\" name=\"txtToolNPM\"></div><br>";
+		echo "<div align= 'center'> <label for=\"file\">Filename: &nbsp;&nbsp;</label>";
+		echo "<input type=\"file\" name=\"file\" id=\"file\"><br> </div> <br>";
 		echo "<input type=\"hidden\" name=\"toolID\" value=\"" . $_POST['tool'] . "\">";
 		echo "<div align= 'center'> <input type=\"submit\" name=\"btSubmit\" value=\"Upload\"></div>";
 		
